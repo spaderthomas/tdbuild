@@ -1,6 +1,8 @@
 import os, subprocess, sys, re, shutil, platform, colorama
+from pkg_resources import Requirement, resource_filename
 
 PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))
+TEMPLATE_PATH = resource_filename(Requirement.parse("tdbuild"), os.path.join("tdbuild", "tdfile.template"))
 
 colorama.init()
 
@@ -298,14 +300,20 @@ class base_builder():
         print_warning("Calling setup, but no setup step was defined.")
 
 
+def new_project():
+    here = os.getcwd()
+    shutil.copy(TEMPLATE_PATH, os.path.join(os.getcwd(), "tdfile.py"))
+    print_info(f'New project initialized in {here}. Add configurations to tdfile.py to get started!')
+        
 def main():
+    if len(sys.argv) > 1 and sys.argv[1] == "new":
+        new_project()
+        
     sys.path.append(os.getcwd())
     import tdfile
 
     builder = tdfile.Builder()
     builder.build_options = tdfile.build_options
-
-    print(sys.argv)
     
     if len(sys.argv) is 1 or sys.argv[1] == "build":
         builder.prebuild()

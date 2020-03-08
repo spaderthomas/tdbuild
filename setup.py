@@ -17,7 +17,7 @@ from pkg_resources import Requirement, resource_filename
 # Package meta-data.
 NAME = 'tdbuild'
 DESCRIPTION = 'A simple tool to build C/C++ projects.'
-URL = ''
+URL = 'http://www.spaderthomas.com'
 EMAIL = 'thomas.spader@gmail.com'
 AUTHOR = 'Thomas Spader'
 REQUIRES_PYTHON = '>=3.6.0'
@@ -107,8 +107,7 @@ setup(
     include_package_data=True,
     packages=['tdbuild'],
     # If your package is a single module, use this instead of 'packages':
-    # py_modules=['mypackage'],
-
+    # py_modules=['tdbuild.tdbuild'],
     entry_points={
         'console_scripts': [
             'tdbuild=tdbuild.tdbuild:main'],
