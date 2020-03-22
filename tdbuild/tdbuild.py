@@ -1,7 +1,6 @@
 import os, subprocess, sys, re, shutil, platform, colorama
 from pkg_resources import Requirement, resource_filename
 
-PROJECT_ROOT = os.path.dirname(os.path.realpath(__file__))
 TEMPLATE_PATH = resource_filename(Requirement.parse("tdbuild"), os.path.join("tdbuild", "tdfile.template"))
 
 colorama.init()
@@ -50,7 +49,19 @@ class base_builder():
     def __init__(self):
         self.build_options = None
         self.build_cmd = ""
-        self.unix_args = []
+        self.project_root = os.getcwd()
+
+    def add_unix_source(self):
+        for source in self.build_options['source_files']:
+            absolute_source_file = os.path.join(self.project_root, self.build_options['source_dir'], source)
+            absolute_source_file = os.path.realpath(absolute_source_file)
+            self.push(absolute_source_file)
+            
+    def add_unix_includes(self):
+        for include in self.build_options['include_dirs']:
+            absolute_include_dir = os.path.join(self.project_root, include)
+            absolute_include_dir = os.path.realpath(absolute_include_dir)
+            self.push("-I" + absolute_include_dir)
 
     def push(self, item):
         self.build_cmd = self.build_cmd + item + " "
@@ -60,6 +71,7 @@ class base_builder():
         
     def build(self):
         print_info("Running from {}".format(os.getcwd()))
+        print_info("Project root is {}".format(self.project_root))
         if platform.system() == 'Windows':
             self.build_windows()
         elif platform.system() == 'Darwin':
@@ -74,7 +86,7 @@ class base_builder():
         compiler_path, err = process.communicate()
         compiler_path = compiler_path.decode('UTF-8').strip()
         if err or not compiler_path:
-            print_error("which {} errored out, so not sure what's up with that".format(self.build_options['Darwin']['compiler']))
+            print_error("tried to find your compiler using 'which {}', but it returned an error.".format(self.build_options['Linux']['compiler']))
             exit()
             
         self.push(compiler_path)
@@ -88,16 +100,13 @@ class base_builder():
         for extra in self.build_options['Linux']['extras']:
             self.push(extra)
 
-        for source in self.build_options['source_files']:
-            self.push(os.path.join(self.build_options['source_dir'], source))
-
-        for include in self.build_options['include_dirs']:
-            self.push("-I" + include)
+        self.add_unix_source()
+        self.add_unix_includes()
             
         self.push('-o ' + self.build_options['Linux']['out'])
 
         for lib in self.build_options['Linux']['user_libs']:
-            self.push('-l{}'.format(lib))
+            self.push('-l' + lib)
 
         for lib in self.build_options['Linux']['system_libs']:
             self.push('-l' + lib)
@@ -151,7 +160,7 @@ class base_builder():
         compiler_path, err = process.communicate()
         compiler_path = compiler_path.decode('UTF-8').strip()
         if err or not compiler_path:
-            print_error("which {} errored out, so not sure what's up with that".format(self.build_options['Darwin']['compiler']))
+            print_error("tried to find your compiler using 'which {}', but it returned an error.".format(self.build_options['Darwin']['compiler']))
             exit()
             
         self.push(compiler_path)
@@ -165,14 +174,13 @@ class base_builder():
         for extra in self.build_options['Darwin']['extras']:
             self.push(extra)
 
-        for source in self.build_options['source_files']:
-            self.push(os.path.join(self.build_options['source_dir'], source))
-
-        for include in self.build_options['include_dirs']:
-            self.push("-I" + include)
+        self.add_unix_source()
+        self.add_unix_includs()
 
         for lib in self.build_options['Darwin']['user_libs']:
-            self.push(os.path.join(self.build_options['lib_dir'], lib))
+            absolute_lib_path = os.path.join(self.project_root, self.build_options['lib_dir'], lib)
+            absolute_lib_path = os.path.realpath(absolute_lib_path)
+            self.push(absolute_lib_path)
 
         for lib in self.build_options['Darwin']['system_libs']:
             self.push('-l' + lib)
@@ -306,14 +314,29 @@ def new_project():
     print_info(f'New project initialized in {here}. Add configurations to tdfile.py to get started!')
         
 def main():
-    if len(sys.argv) > 1 and sys.argv[1] == "new":
-        new_project()
+    if len(sys.argv) == 2 and sys.argv[1] == "version":
+        sys.path.append(os.path.dirname(os.path.realpath(__file__)))
         
-    sys.path.append(os.getcwd())
-    import tdfile
+        import __version__
+        version = __version__.__version__
+        print(f'tdbuild, version {version}')
+        print(f'a simple build tool for c/c++ projects')
+        print('')
+        print('usage:')
+        print('\ttdbuild new')
+        print('\ttdbuild build')
+        print('\ttdbuild run')
+        
+    try:
+        sys.path.append(os.getcwd())
+        import tdfile
 
-    builder = tdfile.Builder()
-    builder.build_options = tdfile.build_options
+        builder = tdfile.Builder()
+        builder.build_options = tdfile.build_options
+    except:
+        print('Tried to call build(), but no tdfile was found. Did you initialize a project with tdbuild new?')
+        return
+        
     
     if len(sys.argv) is 1 or sys.argv[1] == "build":
         builder.prebuild()
@@ -324,6 +347,8 @@ def main():
         builder.run()
     elif sys.argv[1] == "setup":
         builder.setup()
+    elif sys.argv[1] == "new":
+        new_project()
 
 # Main to let you invoke through the command line. 
 if __name__ == "__main__":

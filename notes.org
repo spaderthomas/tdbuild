@@ -1,0 +1,4 @@
+* Bugs
+There's a bunch of non-required fields that error out if you don't have them. It
+works because the template ships with them, but if you want to have a clean
+build configuration it doesn't work.
