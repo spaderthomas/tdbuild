@@ -1,4 +1,4 @@
-# Installattion
+# Installation
 
 `pip install tdbuild`
 
