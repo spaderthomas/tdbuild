@@ -1,7 +1,23 @@
 import os, subprocess, sys, re, shutil, platform, colorama
 from pkg_resources import Requirement, resource_filename
 
+# @hack: I hate Python modules
+sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+import __version__
+version = __version__.__version__
+
 TEMPLATE_PATH = resource_filename(Requirement.parse("tdbuild"), os.path.join("tdbuild", "tdfile.template"))
+
+help_message = '''
+    tdbuild, version {}
+    a simple build tool for c/c++ projects
+    usage:
+        tdbuild new, to initialize a new project
+        tdbuild setup, to run project setup
+        tdbuild prebuild, to run prebuild
+        tdbuild build, to run prebuild + build
+        tdbuild run, to run the executable
+'''.format(version)
 
 colorama.init()
 
@@ -62,6 +78,10 @@ class base_builder():
             absolute_include_dir = os.path.join(self.project_root, include)
             absolute_include_dir = os.path.realpath(absolute_include_dir)
             self.push("-I" + absolute_include_dir)
+            
+    def add_unix_cpp(self):
+        self.push("-std=c++{}".format(self.build_options['cpp_standard']))
+
 
     def push(self, item):
         self.build_cmd = self.build_cmd + item + " "
@@ -92,8 +112,8 @@ class base_builder():
         self.push(compiler_path)
         
         if self.build_options['cpp']:
-            self.push("-std=c++{}".format(self.build_options['cpp_standard']))
-
+            self.add_unix_cpp()
+            
         if self.build_options['debug']:
             self.push("-g")
 
@@ -114,7 +134,7 @@ class base_builder():
         
         print_info("Generated compiler command:")
         print(self.build_cmd)
-        print_info("Running compiler command...")
+        print_info("Compiling...")
 
         make_cd_build_dir(self.build_options['build_dir'])
 
@@ -165,17 +185,18 @@ class base_builder():
             
         self.push(compiler_path)
 
-        if self.build_options['cpp']:
-            self.push("-std=c++{}".format(self.build_options['cpp_standard']))
 
         if self.build_options['debug']:
             self.push("-g")
 
         for extra in self.build_options['Darwin']['extras']:
             self.push(extra)
+            
+        if self.build_options['cpp']:
+            self.add_unix_cpp()
 
         self.add_unix_source()
-        self.add_unix_includs()
+        self.add_unix_includes()
 
         for lib in self.build_options['Darwin']['user_libs']:
             absolute_lib_path = os.path.join(self.project_root, self.build_options['lib_dir'], lib)
@@ -315,17 +336,14 @@ def new_project():
         
 def main():
     if len(sys.argv) == 2 and sys.argv[1] == "version":
-        sys.path.append(os.path.dirname(os.path.realpath(__file__)))
+        print(help_message)
+        return
+    if len(sys.argv) == 2 and sys.argv[1] == "help":
+        print(help_message)
+        return        
         
-        import __version__
-        version = __version__.__version__
-        print(f'tdbuild, version {version}')
-        print(f'a simple build tool for c/c++ projects')
-        print('')
-        print('usage:')
-        print('\ttdbuild new')
-        print('\ttdbuild build')
-        print('\ttdbuild run')
+    if len(sys.argv) == 2 and sys.argv[1] == "new":
+        new_project()
         
     try:
         sys.path.append(os.getcwd())
@@ -347,8 +365,7 @@ def main():
         builder.run()
     elif sys.argv[1] == "setup":
         builder.setup()
-    elif sys.argv[1] == "new":
-        new_project()
+
 
 # Main to let you invoke through the command line. 
 if __name__ == "__main__":
