@@ -67,6 +67,9 @@ class base_builder():
         self.build_cmd = ""
         self.project_root = os.getcwd()
 
+    def absolute_path(self, path_elements):
+        return os.path.join(self.project_root, *path_elements)
+    
     def add_unix_source(self):
         for source in self.build_options['source_files']:
             absolute_source_file = os.path.join(self.project_root, self.build_options['source_dir'], source)
@@ -131,7 +134,6 @@ class base_builder():
         for lib in self.build_options['Linux']['system_libs']:
             self.push('-l' + lib)
 
-        
         print_info("Generated compiler command:")
         print(self.build_cmd)
         print_info("Compiling...")
