@@ -261,18 +261,20 @@ class base_builder():
         self.push("/" + self.build_options['Windows']['runtime_library'])
 
         for source_file in self.build_options['source_files']:
-            full_source_file_path = os.path.join(self.build_options['source_dir'], source_file)
-            self.push(quote(full_source_file_path))
+            absolute_source_file = os.path.join(self.project_root, self.build_options['source_dir'], source_file)
+            self.push(quote(absolute_source_file))
 
         for include_dir in self.build_options['include_dirs']:
-            self.push('/I{}'.format(quote(include_dir)))
+            absolute_include_dir = os.path.join(self.project_root, include_dir)
+            self.push('/I{}'.format(quote(absolute_include_dir)))
 
         self.push("/link")
         for system_lib in self.build_options['Windows']['system_libs']:
             self.push(system_lib)
 
         for user_lib in self.build_options['Windows']['user_libs']:
-            self.push(quote(os.path.join(self.build_options['lib_dir'], user_lib)))
+            absolute_lib_dir = os.path.join(self.project_root, self.build_options['lib_dir'], user_lib)
+            self.push(quote(absolute_lib_dir))
             
         for ignore in self.build_options['Windows']['ignore']:
             self.push("/ignore:" + ignore)
@@ -286,7 +288,8 @@ class base_builder():
 
         # Copy DLLs
         for dll in self.build_options['Windows']['dlls']:
-            dll_path = os.path.abspath(os.path.join(self.build_options['lib_dir'], dll))
+            dll_path = os.path.join(self.project_root, self.build_options['lib_dir'], dll)
+            print(dll_path)
             shutil.copy(dll_path, os.getcwd())
             print_info("Copied DLL {} to {}".format(dll_path, os.getcwd()))
         
@@ -296,7 +299,7 @@ class base_builder():
         print("")
         
         # @hack: is there a better way to keep a process open?
-        process = subprocess.Popen("{} && {}".format(os.path.join("..", "setup_devenv.bat"), self.build_cmd), stdout=subprocess.PIPE)
+        process = subprocess.Popen(self.build_cmd, stdout=subprocess.PIPE, env=os.environ.copy())
         compiler_messages, err = process.communicate()
         compiler_messages = compiler_messages.decode('UTF-8').split('\n')
         

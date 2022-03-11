@@ -11,7 +11,9 @@ from shutil import rmtree
 import json
 import subprocess
 
-from setuptools import find_packages, setup, Command
+#from setuptools import find_packages, setup, Command
+from setuptools import find_packages, Command
+from distutils.core import setup
 from pkg_resources import Requirement, resource_filename
 
 # Package meta-data.
