@@ -1,3 +1,11 @@
+# TODO:
+# binary_type
+# defines on all platforms
+# update template
+# make most fields optional
+# return to calling dir after building
+# private functions
+
 import os, subprocess, sys, re, shutil, platform, colorama
 from pkg_resources import Requirement, resource_filename
 
@@ -243,6 +251,7 @@ class base_builder():
             print(colorama.Fore.GREEN + "[BUILD SUCCESSFUL]")
 
     def build_windows(self):
+        win_options = self.build_options['Windows']
         self.push("cl.exe")
 
         for extra in self.build_options['Windows']['extras']:
@@ -260,7 +269,8 @@ class base_builder():
         for warning in self.build_options['Windows']['warnings']:
             self.push("/wd{}".format(warning))
 
-        self.push("/" + self.build_options['Windows']['runtime_library'])
+        if win_options['runtime_library']:
+            self.push("/" + self.build_options['Windows']['runtime_library'])
 
         for source_file in self.build_options['source_files']:
             absolute_source_file = os.path.join(self.project_root, self.build_options['source_dir'], source_file)
@@ -270,30 +280,46 @@ class base_builder():
             absolute_include_dir = os.path.join(self.project_root, include_dir)
             self.push('/I{}'.format(quote(absolute_include_dir)))
 
+        if 'defines' in self.build_options:
+            for define in self.build_options['defines']:
+                self.push('/D{}'.format(define))
+
+        if 'binary_type' in self.build_options:
+            binary_type = self.build_options['binary_type']
+            if binary_type == 'dll':
+                self.push('/LD')
+                
         self.push("/link")
+        self.push("/verbose:lib")
         for system_lib in self.build_options['Windows']['system_libs']:
             self.push(system_lib)
 
         for user_lib in self.build_options['Windows']['user_libs']:
             absolute_lib_dir = os.path.join(self.project_root, self.build_options['lib_dir'], user_lib)
             self.push(quote(absolute_lib_dir))
+
+        if not self.build_options['show_console']:
+            self.push('/SUBSYSTEM:windows')
+            self.push('/ENTRY:mainCRTStartup')
             
         for ignore in self.build_options['Windows']['ignore']:
             self.push("/ignore:" + ignore)
 
-        if 'machine' in self.build_options['Windows']:
-            self.push("/MACHINE:{}".format(self.build_options['Windows']['machine']))
+        if 'arch' in self.build_options['Windows']:
+            arch = self.build_options['Windows']['arch']
+            if arch == 'x86_64':
+                self.push("/MACHINE:X64")
 
         self.push("/out:" + self.build_options['Windows']['out'])
 
         make_cd_build_dir(self.build_options['build_dir'])
 
         # Copy DLLs
-        for dll in self.build_options['Windows']['dlls']:
-            dll_path = os.path.join(self.project_root, self.build_options['lib_dir'], dll)
-            print(dll_path)
-            shutil.copy(dll_path, os.getcwd())
-            print_info("Copied DLL {} to {}".format(dll_path, os.getcwd()))
+        if 'dlls' in self.build_options['Windows']:
+            for dll in self.build_options['Windows']['dlls']:
+                dll_path = os.path.join(self.project_root, self.build_options['lib_dir'], dll)
+                shutil.copy(dll_path, os.getcwd())
+                print_info("Copied DLL {} to {}".format(dll_path, os.getcwd()))
         
         print_info("Generated compiler command:")
         print_info(self.build_cmd)
@@ -321,9 +347,9 @@ class base_builder():
             print("")
             
         if compile_error:
-            print(colorama.Fore.RED + "[BUILD FAILED]")
+            print(colorama.Fore.RED + "[BUILD FAILED]" + colorama.Fore.RESET)
         else:
-            print(colorama.Fore.GREEN + "[BUILD SUCCESSFUL]")
+            print(colorama.Fore.GREEN + "[BUILD SUCCESSFUL]" + colorama.Fore.RESET)
 
         
     def run(self):
@@ -333,6 +359,20 @@ class base_builder():
     def setup(self):
         print_warning("Calling setup, but no setup step was defined.")
 
+    def set_output_filename(self, filename):
+        self.build_options['Windows']['out'] = '{0}.exe'.format(filename)
+        self.build_options['Linux']['out'] = filename
+        self.build_options['Darwin']['out'] = filename
+
+    def get_output_filename(self):
+        os_options = self.build_options[platform.system()]
+        return os_options['out']
+        
+    def get_output_path(self):
+        return os.path.realpath(os.path.join(self.build_options['build_dir'], self.get_output_filename()))
+
+    def get_build_dir(self):
+        return os.path.realpath(os.path.join(self.project_root, self.build_options['build_dir']))
 
 def new_project():
     here = os.getcwd()
@@ -361,7 +401,7 @@ def main():
         return
         
     
-    if len(sys.argv) is 1 or sys.argv[1] == "build":
+    if len(sys.argv) == 1 or sys.argv[1] == "build":
         builder.prebuild()
         builder.build()
     elif sys.argv[1] == "prebuild":
@@ -370,6 +410,11 @@ def main():
         builder.run()
     elif sys.argv[1] == "setup":
         builder.setup()
+    else:
+        method = getattr(builder, sys.argv[1])
+        method()
+        
+
 
 
 # Main to let you invoke through the command line. 

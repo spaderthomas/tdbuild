@@ -9,6 +9,7 @@ build_options = {
     'debug': True,
     'cpp': True,
     'cpp_standard': '17',
+	'defines': [],
     'Windows': {
         'system_libs': [],
         'user_libs': [],
