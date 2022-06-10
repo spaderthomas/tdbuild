@@ -201,9 +201,9 @@ class base_builder():
                 print("")
             
         if compile_error:
-            print(colorama.Fore.RED + "[BUILD FAILED]")
+            print(colorama.Fore.RED + "[BUILD FAILED]" + colorama.Fore.RESET)
         else:
-            print(colorama.Fore.GREEN + "[BUILD SUCCESSFUL]")
+            print(colorama.Fore.GREEN + "[BUILD SUCCESSFUL]" + colorama.Fore.RESET)
 
     def build_mac(self):
         # Find the path to the compiler using 'which'
