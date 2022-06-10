@@ -111,8 +111,22 @@ class base_builder():
             self.build_linux()
 
     def build_linux(self):
-        # Find the path to the compiler using 'which'
+        # Set up default options.
+        if 'defines' not in self.build_options:
+            self.build_options['defines'] = []
+
+        if 'cpp' not in self.build_options['Linux']:
+            self.build_options['Linux']['cpp'] = True
+
+        if 'compiler' not in self.build_options['Linux']:
+            if self.build_options['Linux']['cpp']:
+                self.build_options['Linux']['compiler'] = 'g++'
+            else:
+                self.build_options['Linux']['compiler'] = 'gcc'
+                
         compiler = self.build_options['Linux']['compiler']
+            
+        # Find the path to the compiler using 'which'
         process = subprocess.Popen(['which', compiler], stdout=subprocess.PIPE)
         compiler_path, err = process.communicate()
         compiler_path = compiler_path.decode('UTF-8').strip()
@@ -128,6 +142,14 @@ class base_builder():
         if self.build_options['debug']:
             self.push("-g")
 
+        for define in self.build_options['defines']:
+            self.push('-D {}'.format(define))
+            
+        if 'binary_type' in self.build_options:
+            binary_type = self.build_options['binary_type']
+            if binary_type == 'shared_library':
+                self.push('-shared')
+            
         for extra in self.build_options['Linux']['extras']:
             self.push(extra)
 
@@ -286,7 +308,7 @@ class base_builder():
 
         if 'binary_type' in self.build_options:
             binary_type = self.build_options['binary_type']
-            if binary_type == 'dll':
+            if binary_type == 'shared_library':
                 self.push('/LD')
                 
         self.push("/link")
