@@ -5,6 +5,8 @@
 # make most fields optional
 # return to calling dir after building
 # private functions
+# No Linux ignores
+# No Linux warnings
 
 import os, subprocess, sys, re, shutil, platform, colorama
 from pkg_resources import Requirement, resource_filename
@@ -103,6 +105,21 @@ class base_builder():
     def build(self):
         print_info("Running from {}".format(os.getcwd()))
         print_info("Project root is {}".format(self.project_root))
+
+        # Platform agnostic defaults
+        if 'defines' not in self.build_options:
+            self.build_options['defines'] = []
+
+        if 'cpp' not in self.build_options:
+            self.build_options['cpp'] = True
+
+        if 'arch' not in self.build_options:
+            self.build_options['arch'] = 'x86_64'
+
+        if 'binary_type' not in self.build_options:
+            self.build_options['binary_type'] = 'executable'
+
+        # Platform specific build function
         if platform.system() == 'Windows':
             self.build_windows()
         elif platform.system() == 'Darwin':
@@ -112,18 +129,23 @@ class base_builder():
 
     def build_linux(self):
         # Set up default options.
-        if 'defines' not in self.build_options:
-            self.build_options['defines'] = []
-
-        if 'cpp' not in self.build_options['Linux']:
-            self.build_options['Linux']['cpp'] = True
-
         if 'compiler' not in self.build_options['Linux']:
-            if self.build_options['Linux']['cpp']:
+            if self.build_options['cpp']:
                 self.build_options['Linux']['compiler'] = 'g++'
             else:
                 self.build_options['Linux']['compiler'] = 'gcc'
-                
+
+        if 'system_libs' not in self.build_options['Linux']:
+            self.build_options['Linux']['system_libs'] = []
+        
+        if 'user_libs' not in self.build_options['Linux']:
+            self.build_options['Linux']['user_libs'] = []
+
+        if 'extras' not in self.build_options['Linux']:
+            self.build_options['Linux']['extras'] = []
+
+
+            
         compiler = self.build_options['Linux']['compiler']
             
         # Find the path to the compiler using 'which'
@@ -163,6 +185,10 @@ class base_builder():
 
         for lib in self.build_options['Linux']['system_libs']:
             self.push('-l' + lib)
+
+        if self.build_options['binary_type'] == 'shared_library':
+            self.push('-shared')
+            self.push('-fPIC')
 
         print_info("Generated compiler command:")
         print(self.build_cmd)
@@ -279,18 +305,22 @@ class base_builder():
         for extra in self.build_options['Windows']['extras']:
             self.push(extra)
 
+        # Tell the compiler whether to compile as C or C++
         if self.build_options['cpp']:
             self.push("/TP")
             self.push("/std:c++{}".format(self.build_options['cpp_standard']))
         else:
             self.push("/TC")
 
+        # Output debug symbols
         if self.build_options['debug']:
             self.push("-Zi")
 
+        # Disable warnings
         for warning in self.build_options['Windows']['warnings']:
             self.push("/wd{}".format(warning))
 
+        # Specify runtime library
         if win_options['runtime_library']:
             self.push("/" + self.build_options['Windows']['runtime_library'])
 
@@ -306,10 +336,8 @@ class base_builder():
             for define in self.build_options['defines']:
                 self.push('/D{}'.format(define))
 
-        if 'binary_type' in self.build_options:
-            binary_type = self.build_options['binary_type']
-            if binary_type == 'shared_library':
-                self.push('/LD')
+        if self.build_options['binary_type'] == 'shared_library':
+            self.push('/LD')
                 
         self.push("/link")
         self.push("/verbose:lib")
