@@ -1,6 +1,7 @@
-import tdbuild.tdbuild as tdbuild
+import tdbuild
 
 build_options = {
+    'project': '',
     'source_dir': '',
     'include_dirs': [],
     'lib_dir': '',
@@ -38,7 +39,7 @@ build_options = {
     }
 }
 
-class Builder(tdbuild.base_builder):
+class Builder(tdbuild.Builder):
     def __init__(self):
         super().__init__()
 

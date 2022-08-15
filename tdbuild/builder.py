@@ -1,77 +1,13 @@
-# TODO:
-# binary_type
-# defines on all platforms
-# update template
-# make most fields optional
-# return to calling dir after building
-# private functions
-# No Linux ignores
-# No Linux warnings
-
 import os, subprocess, sys, re, shutil, platform, colorama
-from pkg_resources import Requirement, resource_filename
+from .utils import *
+from .constants import BinaryType
 
-# @hack: I hate Python modules
-sys.path.append(os.path.dirname(os.path.realpath(__file__)))
-import __version__
-version = __version__.__version__
-
-TEMPLATE_PATH = resource_filename(Requirement.parse("tdbuild"), os.path.join("tdbuild", "tdfile.template"))
-
-help_message = '''
-    tdbuild, version {}
-    a simple build tool for c/c++ projects
-    usage:
-        tdbuild new, to initialize a new project
-        tdbuild setup, to run project setup
-        tdbuild prebuild, to run prebuild
-        tdbuild build, to run prebuild + build
-        tdbuild run, to run the executable
-'''.format(version)
 
 colorama.init()
 
-def make_cd_build_dir(build_dir):
-    build_dir = os.path.join(os.getcwd(), build_dir)
-    try:
-        os.mkdir(build_dir)
-    except:
-        pass
-    os.chdir(build_dir)
-
-def print_info(message):
-    print(colorama.Fore.BLUE + "[info] " + colorama.Fore.RESET + message)
-
-def print_error(message):
-    print(colorama.Fore.RED + "[error] " + colorama.Fore.RESET + message)
-
-def print_warning(message):
-    print(colorama.Fore.YELLOW + "[warning] " + colorama.Fore.RESET + message)
-    
-def print_success(message):
-    print(colorama.Fore.GREEN + "[success] " + colorama.Fore.RESET + message)
-    
-def print_prebuild(message):
-    print(colorama.Fore.CYAN + "[prebuild] " + colorama.Fore.RESET + message)
-    
-def quote(string):
-    return '"{}"'.format(string)
-
-def trailing_slash(path):
-    return os.path.join(path, "")
-
-def actually_has_message(maybe_messages):
-    # @hack. Sometimes I'll get a list containing one empty string.
-    # It makes my output look ugly, so I hack around it. 
-    for maybe_message in maybe_messages:
-        if len(maybe_message):
-            return True
-
-    return False
-
 # Base builder class. Reads in configurations, generates a compiler command, executes it. Provides
 # 'virtual' methods you can override. 
-class base_builder():
+class Builder():
     def __init__(self):
         self.build_options = None
         self.build_cmd = ""
@@ -103,6 +39,7 @@ class base_builder():
         print_warning("Calling prebuild, but no prebuild step was defined.")
         
     def build(self):
+        print_info("Building {}".format(self.build_options['project']))
         print_info("Running from {}".format(os.getcwd()))
         print_info("Project root is {}".format(self.project_root))
 
@@ -119,6 +56,12 @@ class base_builder():
         if 'binary_type' not in self.build_options:
             self.build_options['binary_type'] = 'executable'
 
+        if 'disable_console' not in self.build_options:
+            self.build_options['disable_console'] = False
+
+        self.build_options['source_dir'] = os.path.realpath(self.build_options['source_dir'])
+
+        
         # Platform specific build function
         if platform.system() == 'Windows':
             self.build_windows()
@@ -166,11 +109,6 @@ class base_builder():
 
         for define in self.build_options['defines']:
             self.push('-D {}'.format(define))
-            
-        if 'binary_type' in self.build_options:
-            binary_type = self.build_options['binary_type']
-            if binary_type == 'shared_library':
-                self.push('-shared')
             
         for extra in self.build_options['Linux']['extras']:
             self.push(extra)
@@ -222,14 +160,12 @@ class base_builder():
                     print_warning(message)
                     compile_warning = True
 
-
-            if compile_error or compile_warning:
-                print("")
-            
         if compile_error:
             print(colorama.Fore.RED + "[BUILD FAILED]" + colorama.Fore.RESET)
         else:
             print(colorama.Fore.GREEN + "[BUILD SUCCESSFUL]" + colorama.Fore.RESET)
+
+        print('')
 
     def build_mac(self):
         # Find the path to the compiler using 'which'
@@ -290,13 +226,12 @@ class base_builder():
                 print_warning(message)
                 compile_warning = True
 
-        if compile_error or compile_warning:
-            print("")
-            
         if compile_error:
             print(colorama.Fore.RED + "[BUILD FAILED]")
         else:
             print(colorama.Fore.GREEN + "[BUILD SUCCESSFUL]")
+
+        print('')
 
     def build_windows(self):
         win_options = self.build_options['Windows']
@@ -336,11 +271,10 @@ class base_builder():
             for define in self.build_options['defines']:
                 self.push('/D{}'.format(define))
 
-        if self.build_options['binary_type'] == 'shared_library':
+        if self.build_options['binary_type'] == BinaryType.SHARED_LIB:
             self.push('/LD')
                 
         self.push("/link")
-        self.push("/verbose:lib")
         for system_lib in self.build_options['Windows']['system_libs']:
             self.push(system_lib)
 
@@ -348,9 +282,11 @@ class base_builder():
             absolute_lib_dir = os.path.join(self.project_root, self.build_options['lib_dir'], user_lib)
             self.push(quote(absolute_lib_dir))
 
-        if not self.build_options['show_console']:
+        if self.build_options['disable_console']:
             self.push('/SUBSYSTEM:windows')
             self.push('/ENTRY:mainCRTStartup')
+        else:
+            self.push('/SUBSYSTEM:console')
             
         for ignore in self.build_options['Windows']['ignore']:
             self.push("/ignore:" + ignore)
@@ -374,7 +310,6 @@ class base_builder():
         print_info("Generated compiler command:")
         print_info(self.build_cmd)
         print_info("Invoking the compiler")
-        print("")
         
         # @hack: is there a better way to keep a process open?
         process = subprocess.Popen(self.build_cmd, stdout=subprocess.PIPE, env=os.environ.copy())
@@ -393,14 +328,12 @@ class base_builder():
 
         os.chdir("..")
 
-        if compile_error or compile_warning:
-            print("")
-            
         if compile_error:
             print(colorama.Fore.RED + "[BUILD FAILED]" + colorama.Fore.RESET)
         else:
             print(colorama.Fore.GREEN + "[BUILD SUCCESSFUL]" + colorama.Fore.RESET)
 
+        print('')
         
     def run(self):
         executable = os.path.join(os.getcwd(), self.build_options['build_dir'], self.build_options[platform.system()]['out'])
@@ -423,50 +356,3 @@ class base_builder():
 
     def get_build_dir(self):
         return os.path.realpath(os.path.join(self.project_root, self.build_options['build_dir']))
-
-def new_project():
-    here = os.getcwd()
-    shutil.copy(TEMPLATE_PATH, os.path.join(os.getcwd(), "tdfile.py"))
-    print_info(f'New project initialized in {here}. Add configurations to tdfile.py to get started!')
-        
-def main():
-    if len(sys.argv) == 2 and sys.argv[1] == "version":
-        print(help_message)
-        return
-    if len(sys.argv) == 2 and sys.argv[1] == "help":
-        print(help_message)
-        return        
-        
-    if len(sys.argv) == 2 and sys.argv[1] == "new":
-        new_project()
-        
-    try:
-        sys.path.append(os.getcwd())
-        import tdfile
-
-        builder = tdfile.Builder()
-        builder.build_options = tdfile.build_options
-    except:
-        print('Tried to call build(), but no tdfile was found. Did you initialize a project with tdbuild new?')
-        return
-        
-    
-    if len(sys.argv) == 1 or sys.argv[1] == "build":
-        builder.prebuild()
-        builder.build()
-    elif sys.argv[1] == "prebuild":
-        builder.prebuild()
-    elif sys.argv[1] == "run":
-        builder.run()
-    elif sys.argv[1] == "setup":
-        builder.setup()
-    else:
-        method = getattr(builder, sys.argv[1])
-        method()
-        
-
-
-
-# Main to let you invoke through the command line. 
-if __name__ == "__main__":
-    main()
