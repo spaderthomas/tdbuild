@@ -1,9 +1,12 @@
 [tool.poetry]
 name = "tdbuild"
-version = "3.0.0"
-description = ""
-authors = ["spaderthomas <thomas.spader@gmail.com>"]
+version = "3.0.5"
+description = "A simple build tool for C and C++"
+authors = ["spader <thomas.spader@gmail.com>"]
 include = ["tdbuild/tdfile.template"]
+homepage = 'https://spader.zone'
+repository = 'https://github.com/spaderthomas/tdbuild'
+readme = 'README.md'
 
 [tool.poetry.scripts]
 tdbuild = 'tdbuild.cli:main'
