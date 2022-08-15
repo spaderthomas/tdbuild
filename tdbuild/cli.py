@@ -49,14 +49,9 @@ def main():
         
     
     if len(sys.argv) == 1 or sys.argv[1] == "build":
-        builder.prebuild()
         builder.build()
-    elif sys.argv[1] == "prebuild":
-        builder.prebuild()
     elif sys.argv[1] == "run":
         builder.run()
-    elif sys.argv[1] == "setup":
-        builder.setup()
     else:
         method = getattr(builder, sys.argv[1])
         method()

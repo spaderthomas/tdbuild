@@ -48,10 +48,3 @@ class Builder(tdbuild.Builder):
         
     def run(self):
         super().run()
-        
-    def setup(self):
-        super().setup()
-        
-    def prebuild(self):
-        pass
-    

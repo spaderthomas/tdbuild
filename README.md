@@ -32,3 +32,38 @@ Some projects that I build with `tdbuild` every day:
 - https://github.com/spaderthomas/tdengine, my game engine.
 - https://github.com/spaderthomas/tdeditor, my text editor.
 
+# Options
+
+Your build options are simply a Python dictionary. That's it. Here's a list of all the possible options the tool supports:
+
+### Top Level
+`options.project`: 
+`options.source_dir`: 
+`options.include_dirs`: 
+`options.lib_dir`: 
+`options.build_dir`: 
+`options.source_files`: 
+`options.build_type`: 
+`options.binary_type`: 
+`options.cpp`: 
+`options.cpp_standard`: 
+`options.disable_console`: 
+`options.defines`:
+
+### Windows
+`options.Windows.system_libs`:
+`options.Windows.user_libs`:
+`options.Windows.dlls`:
+`options.Windows.ignore`:
+`options.Windows.arch`:
+`options.Windows.out`:
+`options.Windows.runtime_library`:
+`options.Windows.warnings`:
+`options.Windows.extras`:
+
+## Linux
+`options.Linux.compiler`:
+`options.Linux.user_libs`:
+`options.Linux.system_libs`:
+`options.Linux.extras`:
+`options.Linux.out`:
