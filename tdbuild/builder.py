@@ -95,7 +95,7 @@ class Builder():
         for lib in self.build_options['Linux']['system_libs']:
             self._push('-l' + lib)
 
-        if self.build_options['binary_type'] == 'shared_library':
+        if self.build_options['binary_type'] == BinaryType.SHARED_LIB:
             self._push('-shared')
             self._push('-fPIC')
 
