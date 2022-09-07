@@ -1,3 +1,4 @@
+
 import os, subprocess, sys, re, shutil, platform, colorama
 from .utils import *
 from .constants import BinaryType, BuildType
@@ -139,6 +140,25 @@ class Builder():
         print('')
 
     def build_mac(self):
+        # Defaults
+        if 'compiler' not in self.build_options['Darwin']:
+            if self.build_options['cpp']:
+                self.build_options['Darwin']['compiler'] = 'clang++'
+            else:
+                self.build_options['Darwin']['compiler'] = 'clang'
+
+        if 'extras' not in self.build_options['Darwin']:
+            self.build_options['Darwin']['extras'] = {}
+
+        if 'user_libs' not in self.build_options['Darwin']:
+            self.build_options['Darwin']['user_libs'] = {}
+
+        if 'system_libs' not in self.build_options['Darwin']:
+            self.build_options['Darwin']['system_libs'] = {}
+
+        if 'frameworks' not in self.build_options['Darwin']:
+            self.build_options['Darwin']['frameworks'] = {}
+            
         # Find the path to the compiler using 'which'
         compiler = self.build_options['Darwin']['compiler']
         process = subprocess.Popen(['which', compiler], stdout=subprocess.PIPE)
@@ -150,9 +170,11 @@ class Builder():
             
         self._push(compiler_path)
 
-
         if self.build_options['build_type'] == BuildType.DEBUG:
             self._push("-g")
+
+        for define in self.build_options['defines']:
+            self._push('-D {}'.format(define))
 
         for extra in self.build_options['Darwin']['extras']:
             self._push(extra)
@@ -162,6 +184,10 @@ class Builder():
 
         self._add_unix_source()
         self._add_unix_includes()
+
+        if self.build_options['binary_type'] == BinaryType.SHARED_LIB:
+            self._push('-dynamiclib')
+            self._push('-fPIC')
 
         for lib in self.build_options['Darwin']['user_libs']:
             absolute_lib_path = os.path.join(self.project_root, self.build_options['lib_dir'], lib)
