@@ -1,6 +1,6 @@
 [tool.poetry]
 name = "tdbuild"
-version = "3.0.5"
+version = "3.0.7"
 description = "A simple build tool for C and C++"
 authors = ["spader <thomas.spader@gmail.com>"]
 include = ["tdbuild/tdfile.template"]
@@ -12,7 +12,6 @@ readme = 'README.md'
 tdbuild = 'tdbuild.cli:main'
 
 [tool.poetry.dependencies]
-python = "^3.9"
 colorama = "^0.4.5"
 
 [tool.poetry.dev-dependencies]
