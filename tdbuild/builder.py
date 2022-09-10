@@ -1,4 +1,3 @@
-
 import os, subprocess, sys, re, shutil, platform, colorama
 from .utils import *
 from .constants import BinaryType, BuildType
@@ -91,7 +90,9 @@ class Builder():
         self._push('-o ' + self.build_options['Linux']['out'])
 
         for lib in self.build_options['Linux']['user_libs']:
-            self._push('-l' + lib)
+            absolute_lib_path = os.path.join(self.project_root, self.build_options['lib_dir'], lib)
+            absolute_lib_path = os.path.realpath(absolute_lib_path)
+            self._push(absolute_lib_path)
 
         for lib in self.build_options['Linux']['system_libs']:
             self._push('-l' + lib)
